@@ -42,24 +42,25 @@ class ProjectEvaluator:
         # Calculate the score based on the project name and description
         # Implement your logic here
         score = 0
-        resp = "### NOT POST YET ###"
-        for i in range(10):
-            try:
-                print("post request ", i)
-                messages = [
-                    {"role": "system", "content": self.prompt},
-                    {"role": "user",
-                     "content": f"Project Name: {project_name}\nProject Description: {project_description}\n"}
-                ]
-
-                resp = config.runManualGenerate(messages, config.tokenEstimator(messages))
-                print("response got", i)
-                content = resp['response']
-                json_str = re.search(r'\{.+\}', content, re.S).group(0) 
-                scores_dict = json.loads(json_str)
-                return scores_dict
-            except Exception as e:
-                print(e)
-                print(resp)
-                print('api calling failed')
+        # resp = "### NOT POST YET ###"
+        # for i in range(10):
+        #     try:
+        #         print("post request ", i)
+        #         messages = [
+        #             {"role": "system", "content": self.prompt},
+        #             {"role": "user",
+        #              "content": f"Project Name: {project_name}\nProject Description: {project_description}\n"}
+        #         ]
+        #
+        #         #resp = config.runManualGenerate(messages, config.tokenEstimator(messages))
+        #         print("response got", i)
+        #         content = resp['response']
+        #         json_str = re.search(r'\{.+\}', content, re.S).group(0)
+        #         scores_dict = json.loads(json_str)
+        #         return scores_dict
+        #     except Exception as e:
+        #         print(e)
+        #         print(resp)
+        #         print('api calling failed')
+        # Don't care
         return 
