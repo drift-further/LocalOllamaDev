@@ -1,13 +1,13 @@
 import requests
 from bs4 import BeautifulSoup
-import openai
+#import openai
 import wikipediaapi
 import os
 from camel.localai import LocalAI
 
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+OPENAI_API_KEY = "DNE"
 BASE_URL = os.environ.get('BASE_URL')
-RUN_LOCALLY = False
+RUN_LOCALLY = True
 DECENTRALIZE = False
 
 if 'BASE_URL' in os.environ:
@@ -20,23 +20,12 @@ if 'RUN_LOCALLY' in os.environ:
         DECENTRALIZE = os.environ['DECENTRALIZE']
 else:
     RUN_LOCALLY = False
-    OPENAI_API_KEY = os.environ['OPENAI_API_KEY']
+    OPENAI_API_KEY = "DNU"
 
-if RUN_LOCALLY:
-    client = LocalAI(
+client = LocalAI(
         base_url=BASE_URL,  # may be None
         decentralize=DECENTRALIZE,
-    )
-else:
-    if BASE_URL:
-        client = openai.OpenAI(
-            api_key=OPENAI_API_KEY,
-            base_url=BASE_URL,
-        )
-    else:
-        client = openai.OpenAI(
-            api_key=OPENAI_API_KEY
-        )
+)
 
 
 def get_baidu_baike_content(keyword):

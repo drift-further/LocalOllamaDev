@@ -1,6 +1,10 @@
 import json
 import re
-import openai
+
+import config
+
+
+#import openai
 class ProjectEvaluator:
     def __init__(self):
         self.prompt = """You are a professional start-up project judge. Please score the following open source software project based on the information provided, on a scale of 1 to 10. Your scoring should be divided into three dimensions: feasibility, usability, and innovativeness. Your return result should be a JSON format dictionary. An example is in the following line\n'{"feasibility": {"score": 8.5, "reason": "the idea of this project is simple but natural. tools and tech-schemes it requires are very mature so that it is easy to be implemented"}, "usability": {"score": 9.0, "reason": "the function it claims is very useful. it can help many people enhance efficiency"}, "novelty": {"score": 3.5, "reason": "main the idea of this project is not very frontier"}}'.\nNOTE: You should NOT copy the statement in the example above. You should write your reason independently."""
@@ -42,15 +46,15 @@ class ProjectEvaluator:
         for i in range(10):
             try:
                 print("post request ", i)
-                resp = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo", 
-                    messages=[
-                        {"role": "system", "content": self.prompt}, 
-                        {"role": "user", "content": f"Project Name: {project_name}\nProject Description: {project_description}\n"}
-                    ]
-                )
+                messages = [
+                    {"role": "system", "content": self.prompt},
+                    {"role": "user",
+                     "content": f"Project Name: {project_name}\nProject Description: {project_description}\n"}
+                ]
+
+                resp = config.runManualGenerate(messages, config.tokenEstimator(messages))
                 print("response got", i)
-                content = resp.choices[0]["message"]["content"]
+                content = resp['response']
                 json_str = re.search(r'\{.+\}', content, re.S).group(0) 
                 scores_dict = json.loads(json_str)
                 return scores_dict

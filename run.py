@@ -24,8 +24,8 @@ sys.path.append(root)
 from chatdev.chat_chain import ChatChain
 
 try:
-    from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
-    from openai.types.chat.chat_completion_message import FunctionCall
+    #from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
+    #from openai.types.chat.chat_completion_message import FunctionCall
 
     openai_new_api = True  # new openai api version
 except ImportError:
@@ -101,7 +101,7 @@ args2type = {'GPT_3_5_TURBO': ModelType.GPT_3_5_TURBO,
 if openai_new_api:
     args2type['GPT_3_5_TURBO'] = ModelType.GPT_3_5_TURBO_NEW
 # todo: convert to global variable instead of an env var
-if args.local:
+if args.local or 1==1: #Always run locally
     os.environ["RUN_LOCALLY"] = "1"
 
 chat_chain = ChatChain(use_ollama=args.local,

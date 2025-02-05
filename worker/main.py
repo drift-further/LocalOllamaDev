@@ -1,7 +1,10 @@
 #  AI agent worker is a service listening to tasks put out by the central management server
 #  work cycle: pull -> start -> push
-import openai
+#import openai
 import requests
+
+import config
+
 
 # this sounds like a catastrophe to work with,
 # but right now with how much files i would have to duplicate with the current approach,
@@ -19,13 +22,13 @@ import requests
 # focus on bridging our workers instead of contributing computational power as well.
 
 # todo: if file expands, create a separate Connection file & class
-local_api_url = "http://127.0.0.1:5000/v1"
-openai.api_version = "2023-05-15"
-client = openai.OpenAI(
-    organization='LOCAL_WORKER',
-    api_key='sk-111111111111111111111111111111111111111111111111',
-    base_url=local_api_url
-)
+#local_api_url = "http://127.0.0.1:5000/v1"
+#openai.api_version = "2023-05-15"
+# client = openai.OpenAI(
+#     organization='LOCAL_WORKER',
+#     api_key='sk-111111111111111111111111111111111111111111111111',
+#     base_url=local_api_url
+# )
 
 def make_simple_request(messages):
     local_url = 'http://127.0.0.1:5000/v1/chat/completions'
@@ -99,7 +102,7 @@ def get_manager_status(url='http://127.0.0.1', port=''):
 
 def get_local_status():
     # 1: check if local API is up and running
-    return client.models.list()
+    return config.MODEL_DEFAULT
 
 
 def start_worker():

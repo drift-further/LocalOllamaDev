@@ -14,8 +14,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
-import openai
+#import openai
 import tiktoken
+import config
 
 import camel.typing
 from camel.localai import LocalAI, LocalChatCompletion
@@ -44,7 +45,7 @@ if 'RUN_LOCALLY' in os.environ:
         DECENTRALIZE = os.environ['DECENTRALIZE']
 else:
     RUN_LOCALLY = False
-    OPENAI_API_KEY = os.environ['OPENAI_API_KEY']
+    OPENAI_API_KEY = "DNU"
 
 
 class ModelBackend(ABC):
@@ -75,10 +76,10 @@ class OpenAIModel(ModelBackend):
 
     def run(self, *args, **kwargs):
         string = "\n".join([message["content"] for message in kwargs["messages"]])
-        encoding = tiktoken.encoding_for_model(self.model_type.value)
-        num_prompt_tokens = len(encoding.encode(string))
-        gap_between_send_receive = 15 * len(kwargs["messages"])
-        num_prompt_tokens += gap_between_send_receive
+        #encoding = tiktoken.encoding_for_model(self.model_type.value)
+        #num_prompt_tokens = len(encoding.encode(string))
+        #gap_between_send_receive = 15 * len(kwargs["messages"])
+        #num_prompt_tokens += gap_between_send_receive
 
         if RUN_LOCALLY:
             client = LocalAI(
@@ -98,18 +99,17 @@ class OpenAIModel(ModelBackend):
             # note: Enum entry was added, this did not fix the underlying issue
             #self.model_type = ModelType('llama2-uncensored:7b')
 
-            num_max_token = num_max_token_map['openhermes']
-            num_max_completion_tokens = num_max_token - num_prompt_tokens
-            self.model_config_dict['max_tokens'] = num_max_completion_tokens
+            #num_max_token = num_max_token_map['openhermes']
+            #num_max_completion_tokens = num_max_token - num_prompt_tokens
+            self.model_config_dict['max_tokens'] = config.tokenEstimator(string)
 
-            response = client.chat.completions.create(*args, **kwargs, model=self.model_type.value,
-                                                      **self.model_config_dict)
+            response = config.runManualGenerate(string, config.tokenEstimator(string))
 
             # note: removed cost calculation, completely unnecessary for locally run models
 
             log_visualize(
                 "**[OpenAI_Usage_Info Receive]**\nprompt_tokens: {}\ncompletion_tokens: {}\ntotal_tokens: {}\n".format(
-                    response.usage.prompt_tokens, response.usage.completion_tokens, response.usage.total_tokens))
+                    response.get('prompt_eval_count'), response.get('eval_count'), response['response']))
 
             # todo: response is not an instance of ChatCompletion, causing this error to trigger
             #       either remove any constraints, or perfectly imitate ChatCompletion and overwrite typename
@@ -119,74 +119,35 @@ class OpenAIModel(ModelBackend):
             return response
         elif openai_new_api:
             # Experimental, add base_url
-            if BASE_URL:
-                client = openai.OpenAI(
-                    api_key=OPENAI_API_KEY,
-                    base_url=BASE_URL,
-                )
-            else:
-                client = openai.OpenAI(
-                    api_key=OPENAI_API_KEY
-                )
 
-            num_max_token_map = {
-                "gpt-3.5-turbo": 4096,
-                "gpt-3.5-turbo-16k": 16384,
-                "gpt-3.5-turbo-0613": 4096,
-                "gpt-3.5-turbo-16k-0613": 16384,
-                "gpt-4": 8192,
-                "gpt-4-0613": 8192,
-                "gpt-4-32k": 32768,
-                "gpt-4-1106-preview": 4096,
-                "gpt-4-1106-vision-preview": 4096,
-            }
-            num_max_token = num_max_token_map[self.model_type.value]
-            num_max_completion_tokens = num_max_token - num_prompt_tokens
-            self.model_config_dict['max_tokens'] = num_max_completion_tokens
-
-            response = client.chat.completions.create(*args, **kwargs, model=self.model_type.value,
-                                                      **self.model_config_dict)
+            response = config.runManualGenerate(string, config.tokenEstimator(string))
 
             cost = prompt_cost(
                 self.model_type.value,
-                num_prompt_tokens=response.usage.prompt_tokens,
-                num_completion_tokens=response.usage.completion_tokens
+                num_prompt_tokens=response.get('prompt_eval_count'),
+                num_completion_tokens=response.get('eval_count')
             )
 
             log_visualize(
                 "**[OpenAI_Usage_Info Receive]**\nprompt_tokens: {}\ncompletion_tokens: {}\ntotal_tokens: {}\ncost: ${:.6f}\n".format(
-                    response.usage.prompt_tokens, response.usage.completion_tokens,
-                    response.usage.total_tokens, cost))
+                    response.get('prompt_eval_count'), response.get('eval_count'),
+                    int(response.get('prompt_eval_count')) + int(response.get('eval_count')), cost))
             if not isinstance(response, ChatCompletion):
                 raise RuntimeError("Unexpected return from OpenAI API")
             return response
         else:
-            num_max_token_map = {
-                "gpt-3.5-turbo": 4096,
-                "gpt-3.5-turbo-16k": 16384,
-                "gpt-3.5-turbo-0613": 4096,
-                "gpt-3.5-turbo-16k-0613": 16384,
-                "gpt-4": 8192,
-                "gpt-4-0613": 8192,
-                "gpt-4-32k": 32768,
-            }
-            num_max_token = num_max_token_map[self.model_type.value]
-            num_max_completion_tokens = num_max_token - num_prompt_tokens
-            self.model_config_dict['max_tokens'] = num_max_completion_tokens
-
-            response = openai.ChatCompletion.create(*args, **kwargs, model=self.model_type.value,
-                                                    **self.model_config_dict)
+            response = config.runManualGenerate(string, config.tokenEstimator(string))
 
             cost = prompt_cost(
                 self.model_type.value,
-                num_prompt_tokens=response["usage"]["prompt_tokens"],
-                num_completion_tokens=response["usage"]["completion_tokens"]
+                num_prompt_tokens=response.get('prompt_eval_count'),
+                num_completion_tokens=response.get('eval_count')
             )
 
             log_visualize(
                 "**[OpenAI_Usage_Info Receive]**\nprompt_tokens: {}\ncompletion_tokens: {}\ntotal_tokens: {}\ncost: ${:.6f}\n".format(
-                    response["usage"]["prompt_tokens"], response["usage"]["completion_tokens"],
-                    response["usage"]["total_tokens"], cost))
+                    response.get('prompt_eval_count'), response.get('eval_count'),
+                    int(response.get('prompt_eval_count')) + int(response.get('eval_count')), cost))
             if not isinstance(response, Dict):
                 raise RuntimeError("Unexpected return from OpenAI API")
             return response
