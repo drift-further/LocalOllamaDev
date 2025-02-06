@@ -19,6 +19,7 @@ from tenacity import retry
 from tenacity.stop import stop_after_attempt
 from tenacity.wait import wait_exponential
 
+import config
 from camel.agents import BaseAgent
 from camel.configs import ChatGPTConfig
 from camel.localai import LocalChatCompletion
@@ -180,25 +181,40 @@ class ChatAgent(BaseAgent):
                 session.
         """
         messages = self.update_messages(input_message)
+        print("Messages raw:" + str(messages))
+
         if self.message_window_size is not None and len(
                 messages) > self.message_window_size:
             messages = [self.system_message
                         ] + messages[-self.message_window_size:]
         openai_messages = [message.to_openai_message() for message in messages]
-        num_tokens = num_tokens_from_messages(openai_messages, self.model)
+        num_tokens = config.tokenEstimator(openai_messages)
+
+        print("openai_messages" + str(openai_messages))
 
         # for openai_message in openai_messages:
         #     # print("{}\t{}".format(openai_message.role, openai_message.content))
         #     print("{}\t{}\t{}".format(openai_message["role"], hash(openai_message["content"]), openai_message["content"][:60].replace("\n", "")))
 
         output_messages: Optional[List[ChatMessage]]
+
         info: Dict[str, Any]
 
         print('tokens used for conversation:', num_tokens)
 
-        if num_tokens < self.model_token_limit:
-            response = self.model_backend.run(messages=openai_messages)
+        if num_tokens < config.MAX_TOKENS:
+            print("Pass check.")
+            response = config.runManualGenerate(openai_messages, config.tokenEstimator(openai_messages))
+            print("OK..." + str(response))
             if RUN_LOCALLY:
+                print("Running locally")
+                print("Output role_name: " + str(self.role_name))
+                print("Output role_type: " + str(self.role_type))
+                print("Output meta_dict: " + str(dict()))
+                for item in openai_messages:
+                    if 'content' in item:
+                        print(item['content'])
+                        print(item['role'])
                 if not isinstance(response, LocalChatCompletion):
                     raise RuntimeError("LocalAI returned unexpected struct")
                 # fixme: choice.message may cause issues here, look further into it
@@ -207,6 +223,7 @@ class ChatAgent(BaseAgent):
                                 meta_dict=dict(), content=choice.message.content, role=choice.message.role)
                     for choice in response.choices
                 ]
+                print("Output Messages: " + str(output_messages))
                 info = self.get_info(
                     response.id,
                     response.usage,

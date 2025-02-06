@@ -7,27 +7,29 @@ from PIL import Image
 MODEL_DEFAULT="deepseek-r1:14b"
 MODEL_VISION_DEFAULT="llama3.2-vision:11b"
 
+MAX_TOKENS = 20480
+
 def tokenEstimator(incomingText = None):
     estimated_tokens = len(incomingText) / 3.5
 
     # Round up to the nearest power of 2 (or specified values)
-    possible_values = [2048, 4096, 8192, 16384, 20480]  # Up to 20k
+    possible_values = [2048, 4096, 8192, 16384, MAX_TOKENS]  # Up to 20k
 
     for value in possible_values:
         if estimated_tokens <= value:
             return value
 
     if incomingText is None:
-        return 20480
+        return MAX_TOKENS
 
-    return 20480
+    return MAX_TOKENS
 
 def runManualGenerate(text, token_count = 2046, model = MODEL_DEFAULT):
 
+    print("Running:" + str(text))
+
     if model == "" or model is None:
         model = MODEL_DEFAULT
-
-    print("Running:" + text)
 
     try:
         # Time the model loading
@@ -36,7 +38,10 @@ def runManualGenerate(text, token_count = 2046, model = MODEL_DEFAULT):
         # Time the response generation
         response_start = time.time()
         ollama.Options.num_ctx = token_count
-        cresponse = ollama.generate(model, text)
+        print("starting...")
+        #cresponse = ollama.generate(model, text)
+        cresponse = ollama.chat(model, text)
+        print("crspn" + str(cresponse))
         response_end = time.time()
         response_time = response_end - response_start
 

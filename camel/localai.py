@@ -118,6 +118,19 @@ class LocalAI:
                 # all supplied kwargs: ['messages', 'model', 'temperature', 'top_p', 'n', 'stream', 'stop',
                 # 'max_tokens', 'presence_penalty', 'frequency_penalty', 'logit_bias', 'user']
 
+                request_url = self.parent.parent.base_url + 'api/chat'  # 'generate' can be used for one-turn chat only
+                # this broken formatting wraps the json inside the key of our html form,
+                # this is the only accepted formatting by ollama
+                # request_headers = {"Content-Type": "application/x-www-form-urlencoded"}
+                request_data = {
+                    'model': self.parent.parent.model,
+                    'messages': messages,
+                }
+
+                response = requests.post(url=request_url, json=request_data, stream=True)
+                response.raise_for_status()
+
+                response_stream = response.iter_lines()
                 response_list = []
 
                 # a frequent bug with llama-uncensored2 is to have a soft-locked loop of the '\n' token being returned
@@ -128,16 +141,38 @@ class LocalAI:
                 prompt_token_count = 0
                 response_token_count = 0
 
-                rsp = config.runManualGenerate(messages)
+                # convert response to json:
+                for chunk in response_stream:
+                    chunk_json = json.loads(chunk)
+                    chunk_text = chunk_json['message']['content']
+                    chunk_done = chunk_json['done']
 
-                response_text = rsp['response']
+                    if chunk_text == repeat_token:
+                        repeat_counter += 1
+                    else:
+                        repeat_counter = 0
+                        repeat_token = chunk_text
+
+                    if chunk_done:
+                        # final chunk contains special information
+                        prompt_token_count = chunk_json['prompt_eval_count']
+                        prompt_token_count = chunk_json['eval_count']
+                        response.close()
+                        break
+                    elif repeat_counter > 5:
+                        response.close()
+                        break
+                    else:
+                        response_list.append(chunk_text)
+
+                response_text = ''.join(response_list)
 
                 print('agent response submitted')
                 print('text:', response_text)
 
                 # token estimations, todo: make use of the llama tokenizer
-                input_cost = rsp.get('prompt_eval_count')
-                output_cost = rsp.get('eval_count')
+                input_cost = prompt_token_count
+                output_cost = response_token_count
                 total_cost = input_cost + output_cost
 
                 # replicate the entire returned object: https://platform.openai.com/docs/api-reference/chat/object
