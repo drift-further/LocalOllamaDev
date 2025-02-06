@@ -7,7 +7,7 @@ from PIL import Image
 MODEL_DEFAULT="deepseek-r1:14b"
 MODEL_VISION_DEFAULT="llama3.2-vision:11b"
 
-def tokenEstimator(incomingText):
+def tokenEstimator(incomingText = None):
     estimated_tokens = len(incomingText) / 3.5
 
     # Round up to the nearest power of 2 (or specified values)
@@ -16,6 +16,9 @@ def tokenEstimator(incomingText):
     for value in possible_values:
         if estimated_tokens <= value:
             return value
+
+    if incomingText is None:
+        return 20480
 
     return 20480
 

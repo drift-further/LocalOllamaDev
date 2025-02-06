@@ -20,6 +20,7 @@ from typing import Any, Callable, List, Optional, Set, TypeVar
 import requests
 import tiktoken
 
+import config
 from camel.messages import OpenAIMessage
 from camel.typing import ModelType, TaskType
 
@@ -58,49 +59,7 @@ def num_tokens_from_messages(
         messages: List[OpenAIMessage],
         model: ModelType,
 ) -> int:
-    r"""Returns the number of tokens used by a list of messages.
-
-    Args:
-        messages (List[OpenAIMessage]): The list of messages to count the
-            number of tokens for.
-        model (ModelType): The OpenAI model used to encode the messages.
-
-    Returns:
-        int: The total number of tokens used by the messages.
-
-    Raises:
-        NotImplementedError: If the specified `model` is not implemented.
-
-    References:
-        - https://github.com/openai/openai-python/blob/main/chatml.md
-        - https://platform.openai.com/docs/models/gpt-4
-        - https://platform.openai.com/docs/models/gpt-3-5
-    """
-    try:
-        value_for_tiktoken = model.value_for_tiktoken
-        encoding = tiktoken.encoding_for_model(value_for_tiktoken)
-    except KeyError:
-        encoding = tiktoken.get_encoding("cl100k_base")
-
-    if model in {
-        ModelType.GPT_3_5_TURBO,
-        ModelType.GPT_3_5_TURBO_NEW,
-        ModelType.GPT_4,
-        ModelType.GPT_4_32k,
-        ModelType.GPT_4_TURBO,
-        ModelType.GPT_4_TURBO_V,
-        ModelType.STUB
-    }:
-        return count_tokens_openai_chat_models(messages, encoding)
-    else:
-        raise NotImplementedError(
-            f"`num_tokens_from_messages`` is not presently implemented "
-            f"for model {model}. "
-            f"See https://github.com/openai/openai-python/blob/main/chatml.md "
-            f"for information on how messages are converted to tokens. "
-            f"See https://platform.openai.com/docs/models/gpt-4"
-            f"or https://platform.openai.com/docs/models/gpt-3-5"
-            f"for information about openai chat models.")
+    return config.tokenEstimator(messages)
 
 
 def get_model_token_limit(model: ModelType) -> int:
@@ -112,20 +71,10 @@ def get_model_token_limit(model: ModelType) -> int:
     Returns:
         int: The maximum token limit for the given model.
     """
-    if model == ModelType.GPT_3_5_TURBO:
-        return 16384
-    elif model == ModelType.GPT_3_5_TURBO_NEW:
-        return 16384
-    elif model == ModelType.GPT_4:
-        return 8192
-    elif model == ModelType.GPT_4_32k:
-        return 32768
-    elif model == ModelType.GPT_4_TURBO:
-        return 128000
-    elif model == ModelType.STUB:
-        return 4096
+    if model == "deepseek-r1:14b":
+        return 32000
     else:
-        raise ValueError("Unknown model type")
+        return config.tokenEstimator()
 
 
 def openai_api_key_required(func: F) -> F:

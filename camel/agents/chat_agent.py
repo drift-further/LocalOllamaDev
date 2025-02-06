@@ -31,14 +31,8 @@ from camel.utils import (
     openai_api_key_required,
 )
 
-try:
-    from openai.types.chat import ChatCompletion
 
-    openai_new_api = True  # new openai api version
-except ImportError:
-    openai_new_api = False  # old openai api version
-
-RUN_LOCALLY = False
+RUN_LOCALLY = True
 if 'RUN_LOCALLY' in os.environ:
     RUN_LOCALLY = os.environ['RUN_LOCALLY']
     openai_new_api = True  # using new_api when running LocalAI (ollama)
@@ -211,20 +205,6 @@ class ChatAgent(BaseAgent):
                 output_messages = [
                     ChatMessage(role_name=self.role_name, role_type=self.role_type,
                                 meta_dict=dict(), content=choice.message.content, role=choice.message.role)
-                    for choice in response.choices
-                ]
-                info = self.get_info(
-                    response.id,
-                    response.usage,
-                    [str(choice.finish_reason) for choice in response.choices],
-                    num_tokens,
-                )
-            elif openai_new_api:
-                if not isinstance(response, ChatCompletion):
-                    raise RuntimeError("OpenAI returned unexpected struct")
-                output_messages = [
-                    ChatMessage(role_name=self.role_name, role_type=self.role_type,
-                                meta_dict=dict(), **dict(choice.message))
                     for choice in response.choices
                 ]
                 info = self.get_info(
